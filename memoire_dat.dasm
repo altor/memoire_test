@@ -1,0 +1,24 @@
+; --------------------------------------------
+; Title: memoire_dat.dasm
+; Author: Altor
+; Date: 
+; Version:
+; --------------------------------------------
+; contient le segment de donnés du gestionaire 
+; de memoire
+; --------------------------------------------
+
+
+
+:kernel_id dat 0xFFFF
+:start_mem dat 0x1000 ; debut de l'espace allouable 
+:end_mem dat 0xEFFF ; fin de l'espace allouable
+:partition_un dat 0x1000
+:start_list dat 0x0000
+:end_list dat 0x0000
+:taille_list dat 0x0000
+:fin dat 0xFFFF
+;table des memoire
+:table_memoires_id dat 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+:table_memoire_adresse dat 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+:table_memoire_liste dat 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0

@@ -1,0 +1,84 @@
+; --------------------------------------------
+; Title: memoire_bas.dasm
+; Author: Altor
+; Date: 
+; Version: 
+; --------------------------------------------
+; contient les routines bas niveau du gestionaire
+; de memoire 
+; --------------------------------------------
+
+;---------------------------------------------
+;               INIT_MEMOIRE
+;---------------------------------------------
+;3 Arguments : -adresse de debut de la partition
+;	       -taille de la partition
+;	       -identifiant su processus
+;---------------------------------------------
+; créer un partition memoire pour un processus
+; les 4 premiére case sont occupé par des info sur la partition
+; id du processus, taille de la partition, adresse de fin,
+; pointeur sur la fin du segment de donnés
+;---------------------------------------------
+:init_memoire
+set push,I
+set push, X
+set I,A ; I contient la premiére adresse de la partition
+set [I],C ; case 1 = id du processus
+add I,1
+set [I],B ;case 2 = taille de la partition en mots
+add I,1
+set X, A
+add X, 3
+add X, B
+set [I], X ; case 3 = derniére adresse de la partition
+add I,1
+add A, 4
+set [I], A    ; case 4 = pointeur sur la fin du segment de donnés
+    
+set X,pop
+set I,pop
+set PC,pop
+
+;-------------------------------------------------
+;MALLOC
+;-------------------------------------------------
+;  2 arguments : -adresse de la partition
+;                -nombre de mots à allouer 
+;  valeur renvoyé : pointeur sur début de la zone ou 0xFFFF si echec
+;-------------------------------------------------
+; malloc alloue une zone de B mots dans la partition A
+; la zone est alloué a la fin du segment de donné de la partition
+;-------------------------------------------------
+
+:malloc
+set push, X
+set push, Y
+set push, Z
+set push, I
+set X, B
+set I, A
+
+add I, 2
+set Y, [I]  ; Y contient la derniére adresse de la partition
+add I, 1
+set Z, [I]  ; Z contient le pointeur sur la fin du segment de donnés
+add Z, X    ; on actualise le pointeur
+ifg Z, Y    ; si le nouveau pointeur sort de la partition : erreur
+    set PC, malloc_erreur
+set A, [I]
+set [I], Z
+
+set I, pop
+set Z, pop
+set Y, pop
+set X, pop
+set PC, pop
+
+:malloc_erreur
+set A, 0xFFFF  
+set I, pop
+set Z, pop
+set Y, pop
+set X, pop
+set PC, pop

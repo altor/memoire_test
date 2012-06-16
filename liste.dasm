@@ -1,0 +1,371 @@
+; --------------------------------------------
+; Title: liste.dasm
+; Author: Altor
+; Date: 
+; Version: 
+; --------------------------------------------
+; routine de gestion de liste chainé pour le 
+; gestionaire de memoire
+; --------------------------------------------
+
+
+
+
+;-------------------------------------------------
+;PARCOURIR_LIST
+;-------------------------------------------------
+; 1 argument : element a ateindre
+;-------------------------------------------------
+; valeur renvoyé : adresse de l'element demandé
+;                        0 sinon
+;--------------------------------------------------
+:parcourir_list
+set push, I
+ifg A, [taille_list]
+    set PC, parcourir_list_erreur
+set I, [start_list]
+ife A, 0    ; si on demande le premier element
+    set PC, parcourir_list_suite
+:parcourir_list_boucle  ; sinon on parcour la liste A fois
+add I, 3    ; I pointe vers la derniére case de l'element courant
+set I, [I]  ; I pointe vers l'element suivant
+sub A, 1
+ifn A, 0
+    set PC, parcourir_list_boucle
+:parcourir_list_suite
+set A, I    ; on renvoi l'adresse de l'element demandé
+:parcourir_list_fin
+set I, pop
+set PC, pop
+
+:parcourir_list_erreur
+set A, 0
+set PC, parcourir_list_fin
+
+
+;-------------------------------------------------
+;           ECRIRE_DONNÉ_LIST
+;-------------------------------------------------
+; 3 arguments : -adresse élément
+;               -case, 
+;               -valeur
+;-------------------------------------------------
+:ecrire_donne_list
+add A, B 
+set [A], C  ; on charge la valeur C à l'adresse de la case
+set PC, pop
+
+;-------------------------------------------------
+;       AJOUTER_ELEMENT_DEBUT
+;-------------------------------------------------
+; 1 arguments : adresse du nouvelle elements
+;-------------------------------------------------
+:ajouter_element_debut
+set push, I ; sauvegarde des registre
+set I, A
+add I, 3    ;I pointe sur la derniére case du nouvelle élément
+set [I], [start_list]   ;le nouvelle élément est rataché au 1er élément de la list
+set [start_list], A ; on actualise le pointeur de début de liste
+add [taille_list], 1
+set I, pop
+set PC, pop
+
+;-------------------------------------------------
+;           AJOUTER_ELEMENT_FIN
+;-------------------------------------------------
+; 1 arguments : adresse du nouvelle elements
+;-------------------------------------------------
+:ajouter_element_fin
+set push, I
+set I, [end_list]
+add I, 3    ;I pointe sur la derniére case du dernier éléments
+set [I], A  ; le dernier élément est rataché au nouvelle élément
+set [end_list], A
+add [taille_list], 1
+add A, 3
+set [A], 0xFFFF
+set I, pop
+set PC, pop
+
+
+;-------------------------------------------------
+;       AJOUTER_ELEMENT_MILIEU
+;-------------------------------------------------
+; 2 arguments : -adresse du nouvelle elements
+;               -adresse element precedent
+;-------------------------------------------------
+:ajouter_element_milieu
+set push, I
+set push, J
+set push, X
+
+set I, B
+set J, A
+add I, 3    ; I pointe sur la derniére case de l'element précédent
+add J, 3    ; J pointe sur la derniére case du nouvelle element
+
+set [J], [I]  ;le nouvelle element est rataché a l'element suivant
+set [I], A ; l'element precedent est rataché au nouvel élément
+add [taille_list], 1
+set X, pop
+set J, pop
+set I, pop
+set PC, pop
+
+
+;-------------------------------------------------
+;       SUPRIMER_ELEMENT_MILIEU
+;-------------------------------------------------
+; 1 arguments : -adresse précédent element a suprimer
+;-------------------------------------------------
+:suprimer_element_milieu
+;sauvegarde des registre
+set push, X
+set push, Y
+set X, A    ; X pointe vers l'element précédent
+add A, 3
+set A, [A]
+set Y, A    ; Y pointe vers l'élément a suprimer
+add A, 3
+set A, [A]  ;A pointe ver l'élément courant
+; !! LIBERATION DE L'ÉLÉMENT POINTÉ PAR Y !!
+add X, 3    ; X pointe vers la derniéres case de l'element précedent
+set [X], A  ; on chaine l'élément suivant et l'élément précédent
+
+set Y, pop
+set X, pop
+set PC, pop
+
+;-------------------------------------------------
+;       SUPRIMER_ELEMENT_DEBUT
+;-------------------------------------------------
+; Pas d'argument
+;-------------------------------------------------
+:suprimer_element_debut
+set A, [start_list]
+add A, 3
+set A, [A]  ; A pointe vers l'element suivant
+;!! ON LIBÉRE L'ELEMENT POINTÉ PAR START_LIST !!
+set [start_list], A ; l'element suivant de viens le premier élément
+
+set PC, pop
+
+;-------------------------------------------------
+;           SUPRIMER_ELEMENT_FIN
+;-------------------------------------------------
+; Pas d'argument
+;-------------------------------------------------
+;!! LIBÉRATION DE L'ÉLÉMENT POINTÉ PAR END_LIST !!
+:suprimer_element_fin
+set A, [taille_list]
+sub A, 1
+jsr parcourir_list
+set [end_list], A
+add A, 3
+set [A], 0xFFFF
+
+; --------------------------------------------
+; INIT_ELEmENT
+; --------------------------------------------
+; 4 arguments : -adresse element a initialiser
+;               -case 1
+;               -case 2
+;               -case 3
+; pas de valeur renvoyé
+; --------------------------------------------
+:init_element
+;sauvegarde des registre
+set push, X
+
+set [A], B ; initialisation case 1
+add A, 1
+set [A], C  ; initialisation case 2
+add A, 1
+set X, SP
+add SP, 2
+set [A], peek ; initialisation case 3
+set SP, X
+set X, pop
+set PC, pop
+
+; --------------------------------------------
+;            ACTUALISER_BLOC
+; --------------------------------------------
+; arguments : -adresse élément précédent élément central
+;             -adresse de la partition
+;             -taille partition
+; Pas de valeur de retour
+; --------------------------------------------
+; fusione les éléments gauche et droite
+; --------------------------------------------
+:actualiser_bloc
+;sauvegarde des registre
+set push, I
+set push, J
+set I, A
+add I, 3
+set I, [I] ; I pointe vers l'élément central
+add I, 2  
+set J, [I] ; J contient la taille de l'élément central
+add I, 1
+set I, [I] ; I pointe vers l'élément de droite
+add I, 2
+add J, [I] ; on ajoute a J la taille de l'élément de droite
+set I, A ; retour au premier élément
+add I, 2
+add [I], J ; l'élément de gauche est actualiser
+add A, 1
+jsr suprimer_element_milieu
+add A, 1
+jsr suprimer_element_milieu
+set J, pop
+set I, pop
+set PC, pop
+
+
+; --------------------------------------------
+;         REmPLISSAGE_PARTIEL
+; --------------------------------------------
+;   arguments : -adresse élément précédent la zone libre
+;               -taille de la partition
+; --------------------------------------------
+; 
+; --------------------------------------------
+:remplissage_partiel
+add A, 2
+add [A], B ; l'élément de gauche est actualisé
+add A, 1
+set A, [A] ; A pointe vers l'élément central
+add A, 1
+add [A], B ;  on actualise l'adresse de départ de l'élément central
+add A, 1
+sub [A], B ; on actualise la taille de l'élément central
+
+set PC, pop
+
+; --------------------------------------------
+;       LIBERATION_PARTIELLE_GAUCHE
+; --------------------------------------------
+;  arguments : -adresse élément precedent élément contenant la partition
+;               -adresse de la partition
+;               -taille de la partition
+; --------------------------------------------
+;
+; --------------------------------------------
+:liberation_partielle_gauche
+add A, 2
+add [A], C
+add A, 1
+set A, [A]
+add A, 1
+add [A], C
+add A, 1
+sub [A], C
+set PC, pop
+
+
+; --------------------------------------------
+;       LIBERATION_PARTIELLE_DROITE
+; --------------------------------------------
+;  arguments : -adresse élément  précédent élément contenant la partition
+;               -adresse de la partition
+;               -taille de la partition
+; --------------------------------------------
+;
+; --------------------------------------------
+:liberation_partielle_droite
+add A, 2
+sub [A], C
+add A, 1
+set A, [A]
+add A, 1
+set [A], B
+add A, 1
+add [A], C
+set PC, pop
+
+
+; --------------------------------------------
+;       LIBERATION_PARTIELLE_mILIEU
+; --------------------------------------------
+;  arguments : -adresse élément contenant la partition
+;               -adresse de la partition
+;               -taille de la partition
+; --------------------------------------------
+; creer un élément central et un élément droite
+; a droite de l'élément appelé
+; reinitialise les 3 élément
+; --------------------------------------------
+:liberation_partielle_milieu
+;sauvegarde des registre
+set push, I
+set push, J
+set push, X
+set push, Y
+set push, Z
+
+;sauvegarde des arguments
+set X, B
+set Y, C
+
+; calcule de la taille élément gauche (Z) et de l'élément droite (J)
+set Z, X
+add A, 1
+set J, [A]
+sub Z, [A]
+add A, 1
+add J, [A]
+sub J, X
+sub J, Y
+
+
+set [A], Z ; initialisation élément gauche
+sub A, 2
+set Z, A ; sauvegarde adresse élément précédent
+
+
+;création élément milieu
+set A, [partition_un]
+set B, 4
+jsr malloc
+
+;ratacher le nouvel élément 
+set B, Z 
+set Z, A ; on sauvegarde A pour pouvoir le réutiliser plus tard
+jsr ajouter_element_milieu
+
+;initialiser nouvel élément
+set A, Z
+set B, 0
+set C, X
+set push, Y
+jsr init_element
+set 0, pop
+
+; creation élément droite
+set A, [partition_un]
+set B, 4
+jsr malloc
+
+;ratacher nouvel élément
+set B, Z
+set Z, A ; on sauvegarde A pour pouvoir le réutiliser plus tard
+jsr ajouter_element_milieu
+
+;initialiser nouvel élément
+set A, Z
+set B, 1
+set C, X
+add C, Y
+set push, J
+jsr init_element
+set 0, pop
+
+set Z, pop
+set Y, pop
+set X, pop
+set J, pop
+set I, pop
+set PC, pop
+
+

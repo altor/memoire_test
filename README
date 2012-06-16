@@ -1,0 +1,122 @@
+BUT===================================================================================
+
+coordonner l'action des routines déjà codées
+offrir une interface plus simple aux autres parties du kernel ainsi qu'aux processus en cour d’exécution
+sécuriser la gestion de la mémoire ( éviter qu'un programme écrive dans la zone mémoire de son voisin )
+offrir une possibilité d’évolution vers une sorte de mémoire virtuelle
+
+Principe de fonctionnement===================================================================
+
+Chaque processus disposera, à son initialisation d'une zone mémoire(partition) dont la taille est décidé par l'OS. le MMU de haut niveau voit la mémoire sous forme de partition. Sa mission est de charger et décharger ces partitions à la demande de l'OS ou de les déplacer si elles ont besoin d’être redimensionnées (ex : le processus en cour a remplis toute sa partition, la partition doit être agrandie)
+
+A chaque fois que le MMU de haut niveau fait une action , il utilise les routines du MMU de bas niveau pour interagir avec la RAM (charger une partition demandera au MMU de bas niveau d'initialiser la zone mémoire demandé et de charger un programme dedans.)
+
+Normalement, le MMU ne devrait recevoir que 2 ordre du kernel, charger et décharger une partition et 1 ordre des processus en cour pour l'allocation dynamique(malloc) ces ordres sont ensuite traités par le MMU de haut niveau qui appelleras les routines du MMU de bas_niveau correspondantes.
+
+Pour référencer l’emplacement des partitions occupées et des zones libres, le MMU utilise une liste chaînée dont chaque entré est divisé en 4 parties
+1 : un booléens qui spécifie si la zone est libre ou occupé
+2 : l'adresse de départ de la zone
+3 : sa taille
+4 : un pointeur vers le prochain élément de la chaîne
+
+Evolution vers une "mémoire virtuelle"===========================================================
+
+le principe des partitions peut s’avérer utile si la RAM viens à être remplis et que de nouveau processus doivent être chargés.Ces processus seront alors stocké sur le disque dur. Pour qu'il soit tout de même exécuté, le shudler pourra implémenter un système de vas et viens entre les partitions stockées dans la RAM et celle sur le disque dur, pour que chaque processus puisse être exécuté en parallèle.
+Ainsi, le système peut continuer à fonctionner normalement ( mais de façon ralentis ) même si sa RAM est saturée.
+Cette partie ne serra peut être pas forcément utile ou réalisable en pratique. La RAM serra peut être suffisamment grande et ne serra donc jamais saturée. De plus, les disques durs seront peut être trop lent pour mettre en place un système de va et viens performant. Mais cela reste une option implémentable facilement en théorie.
+
+
+
+Description des routines==========================================================================
+
+routine appelée par le kernel________________________________
+-Charger processus
+2 arguments : identifiant du processus, taille de la partition à chargre
+valeur renvoyé : booléens d'erreur
+
+charge une partition de la taille demandée par l'OS (routines chercher_zone_mémoire_libre + init_mem + actualiser_liste_mémoire)
+charge le programme dans la partition (routine charger_programmes)
+
+-libérer processus
+3 arguments : id du processus, adresse du début de la partition à libérer, taille de la partition
+valeur renvoyé : booléens d'erreur
+libérer la partition demandée (routines free_mem + Actualiser_liste_mémoire )
+
+-initialisation du MMU
+creer une partition pour la liste chainé
+charge la liste dans la partition
+
+
+routine appelée par les processus________________________________
+
+-Allocation dynamique
+1 argument : id du processus
+valeur renvoyé : adresse du début de la zone mémoire alloué, 0 si erreur
+regarde si il y a de la place dans la partition du processus (routine vérifier_place_partition)
+  si oui on effectue l'Allocation dynamique ( routine malloc )
+si non on redimensionne la partition (routine redimensionner_partition )
+   si la partition peut être redimensionnée on effectue directement l'allocation dynamique (routine malloc)
+sinon on déplace la partition vers une zone mémoire plus grande pour qu'elle puisse être redimensionner ( chercher_zone_libre+mem_cp +redimensionner_partition)
+on effectue alors l'allocation_dynamique
+
+
+routine du MMU haut niveau____________________________________
+
+-chercher_zone_mémoire_libre
+1 arguments, la taille de la partition a charger
+valeur de retour : adresse du début de la zone mémoire trouvé ,0 si erreur
+Le MMU cherche une zone mémoire libre dans la liste chaîné.
+
+-Actualiser_liste_mémoire
+3 arguments:  adresse de départ de la zone actualisé,sa taille, booléens 0 si la zone a été vidé 1 si elle a été remplis
+Le MMU actualise la liste chaîné après qu'une partition est été chargée/déchargée
+
+-Vérifier_place_partition
+1 argument : identifiant du processus, 
+valeur renvoyé : booléens d'erreur ( si il y a de la place pour une allocation dynamique ou pas)
+Le MMU demande au kernel les limites de la zone mémoire du processus appelant. il vérifie alors directement dans la RAM si il reste de la place sur la partition du processus pour faire une allocation dynamique.
+
+-Redimensionner partition
+1 argument : taille de l'agrandissement
+valeur renvoyé :booléens d'erreur (si l'agrandissement est possible ou pas)
+évalue si la partition peut être agrandis ( si elle est voisine d'une zone libre dans la RAM suffisamment grande)
+augmente la taille de la partition (les nouvelles limites de la partitions sont envoyées au kernel)
+la pile est décalée vers la fin de la partition et SP est actualisé.
+
+-Erreur
+1 argument : pointeur sur un code d'erreur
+envoi un code d'erreur au kernel selon l'erreur rencontrée lors du processus de gestion de la mémoire.
+
+
+
+
+Probléme a regler===============================================================
+-proteger la mémoire contre les depassement de tampon et les pointeur mal initialisé (erreur de segmentation)
+-malloc ne gére pas la fragmentation interne
+- la liste chainé est dans l'espace utilisateur ?!
+-probléme si on doit actualiser un élément de la liste en tête ou en fin de liste -> solution , le premiére élémnet contient la liste et n'est pas déplaçable, le dernier élément est toujours libre
+
+A faire===============================================================
+routine d'appel
+	charger_processus
+	  
+routine haut niveau
+	init_gestionaire_memoire OK
+	actualiser_list en cours
+          liste
+	    sécuriser NON
+   	    optimiser ( parcourir la liste le moins souvent possible)
+	  routine d'actualisation
+            algorithme en cour OK
+	    codage OK
+	    debogage OK	
+	
+routine bas niveau
+	init_mem OK
+	malloc frag interne
+	le reste
+autre
+	liste a sécuriser + optimiser
+Régle=====================================================================
+-chaque fonction de méme niveau doit essayer d'etre le moins possible dépendante des autres
+-Aucune fonction de doit repos sur le fonctionement des niveau plus bas ou plus haut

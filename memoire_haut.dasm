@@ -1,0 +1,140 @@
+; --------------------------------------------
+; Title: memoire_haut.dasm
+; Author: Altor
+; Date: 
+; Version: 
+; --------------------------------------------
+; routine de gestion de liste chainé pour le 
+; gestionaire de memoire
+; --------------------------------------------
+
+
+; --------------------------------------------
+;          ECRIRE_TABLE_mEmOIRE
+; --------------------------------------------
+; x arguments : -id du processus
+;               -adresse de sa partition
+;               -adresse de l'élément contenant partition
+; --------------------------------------------
+; initialise une entrée dans la table de la mémoire
+; --------------------------------------------
+:ecrire_table_memoire
+set push, I
+set I, 0
+
+add I, table_memoire_id
+
+
+
+; --------------------------------------------
+;         ACTUALISER_LISTE_mEmOIRE
+; --------------------------------------------
+; 4 arguments : -element précédent élément contenant la partition
+;               -adresse partition
+;               -taille partition
+;               -etat partition (0 vidé, 1 remplis)
+; --------------------------------------------
+; actualise la liste chaîné après qu'une partition
+;  est été chargée/déchargée
+; --------------------------------------------
+:actualiser_liste_memoire
+set push I
+set push J
+;recupération du 4éme argument
+set J, SP
+add SP, 3
+set I, peek
+set SP, J
+IFE I, 0
+  set PC, actualiser_liste_memoire_liberation
+
+;remplissage
+set J, B
+add J, C ; J = taille partition + adresse partition
+set I, A
+add I, 3
+set I, [I] ; I pointe sur l'élément contenant la partition
+add I, 3
+set I, [I] ; I pointe vers l'élément suivant
+add I, 1
+ife J, [I]
+  set PC, actualiser_liste_memoire_actualiser_bloc
+jsr remplissage_partiel
+set PC, actualiser_liste_memoire_fin
+
+
+:actualiser_liste_memoire_actualiser_bloc
+jsr actualiser_bloc
+set PC actualiser_liste_memoire_fin
+
+
+:actualiser_liste_memoire_liberation
+set I, A
+add I, 3
+set I, [I] ; I pointe vers l'élément contenant la partition
+add I, 1
+ife B, [I]
+  set PC, actualiser_liste_memoire_liberation_debut
+add I, 2
+set I, [I] ; I pointe vers l'élément suivant
+add I, 1
+ife J, [I]
+  set PC, actualiser_liste_memoire_liberation_partielle_droite
+jsr liberation_partielle_milieu
+set PC, actualiser_liste_memoire_fin
+
+
+:actualiser_liste_memoire_liberation_partielle_droite
+jsr liberation_partielle_droite
+set PC, actualiser_liste_memoire_fin
+
+:actualiser_liste_memoire_liberation_debut
+add I, 2
+set I, [I] ; I pointe vers l'élément suivant
+add I, 1
+ife J, [I]
+  set PC, actualiser_liste_memoire_actualiser_bloc
+jsr liberation_partielle_gauche
+set PC, actualiser_liste_memoire_fin
+
+:actualiser_liste_memoire_fin
+set J, pop
+set I, pop
+set PC, pop
+
+; --------------------------------------------
+;      CHERCHER_ZONE_mEmOIRE_LIBRE
+; --------------------------------------------
+; 1 arguments : -taille_partition 
+; valeur de retour : pointeur vers précédent 
+; l'élément de la chaine contenant la zone
+; libre necessaire pour l'allocation
+; --------------------------------------------
+; cherche une zone mémoire libre dans la liste 
+; chaîné
+; --------------------------------------------
+:chercher_zone_memoire_libre
+set push, X
+set push, I
+set [start_list], I
+add I, 2 ; le premiére élément ne serat pas vérifier car il contient la liste
+:chercher_zone_memoire_libre_boucle_un
+:chercher_zone_memoire_libre_boucle_deux
+set X, I ; sauvegarde de l'élément précédent
+add I, 1
+set I, [I] ; I pointe vers l'élément suivant
+ifn [I], 0
+  set :chercher_zone_memoire_libre_boucle_deux
+
+add I, 2
+ifl [I], A
+  set :chercher_zone_memoire_libre_boucle_un
+
+set A, X ; on renvoi l'élément précédent
+set I, pop
+set X, pop
+set PC, pop
+
+
+
+          

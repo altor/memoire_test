@@ -1,0 +1,142 @@
+; --------------------------------------------
+; Title: memoire_appel.dasm
+; Author: Altor
+; Date:
+; Version:
+; --------------------------------------------
+; regroupe les routines du gestionaire de mémoire
+; appelable par le kernel et les processus
+; --------------------------------------------
+
+
+
+
+; --------------------------------------------
+;           CHARGER_PROCESSUS
+; --------------------------------------------
+; 2 arguments :-taille de la partition à charger
+;               -identifiant du processus
+; valeur renvoyé : booléens d'erreur
+; --------------------------------------------
+; charge une partition de la taille demandée par l'OS
+; charge le programme dans la partition
+; --------------------------------------------
+:charger_processus
+set push, X
+set push, Y
+set push, Z
+set push, I
+;sauvegarde des arguments
+set X, A
+set Y, B
+;cherhcer une zone memoire pour acceuilllire nouveau processus
+jsr chercher_zone_memoire_libre
+; on récupére l'adresse de la zone libre
+set Z, A ; on sauvegarde l'élément précédent
+add A, 3
+set A, [A] ; A pointe vers l'élément contenant la zone libre
+add A, 1
+set A, [A] ; A contient l'adresse de la zone libre
+; création de la partition
+set B, X
+set C, Y
+jsr init_memoire
+; actualiser la liste memoire
+set A, Z
+set B, A
+add B, 3
+set B, [B]
+add B, 1
+set B, [B] ; B contient l'adresse de la partition créer
+
+
+
+
+; --------------------------------------------
+;            LIBERER_PROCESSUS
+; --------------------------------------------
+; 3 arguments :-id du processus
+;              -adresse du début de la partition à libérer
+;              -taille de la partition
+; valeur renvoyé : booléens d'erreur
+; --------------------------------------------
+; libérer la partition demandée
+; --------------------------------------------
+
+
+; --------------------------------------------
+;          INIT_gestionaire_mEmOIRE
+; --------------------------------------------
+; aucun argument
+; aucune valeur renvoyé
+; --------------------------------------------
+; creer une partition pour la liste chainé
+; charge la liste dans la partition
+; --------------------------------------------
+:init_gestionaire_memoire
+;sauvegarde des registre
+set push, X
+set push, Y
+;creer une partition pour la liste
+set A, [start_mem]
+set B, 0x0028 ; on reserve 40 mots pour la partition soit une liste de 10 éléments
+set C, [kernel_id]
+jsr init_memoire
+
+;creation du premier élément de la chaine
+set A, [start_mem]
+set B, 4
+jsr malloc ; allocation memoire du premier élément
+set [start_list], A
+set [end_list], A
+set [A], 1
+add A, 1
+set [A], [start_mem]
+add A, 1
+set [A], 0x002B
+add A, 1
+set [A], 0xFFFF ; le premier élément est initialisé
+
+;creation du deuxiéme élément
+set A, [start_mem]
+set B, 4
+jsr malloc ; allocation du deuxiéme élément
+set Y, A ; on sauvegarde l'adresse du nouvel élément
+jsr ajouter_element_fin
+set A, Y
+set B, 0
+set C, [start_mem]
+add C, 0x002b
+set X, [end_mem]
+sub X, [start_mem]
+sub X, 0x002b
+set push, X
+jsr init_element
+set 0, pop
+
+set Y, pop
+set X, pop
+set PC, pop
+
+
+
+
+
+; --------------------------------------------
+;           ALLOCATION_DYNAMIQUE
+; --------------------------------------------
+; 1 ARGUMENT : -ID DU PROCESSUS
+; VALEUR RENVOYÉ : -ADRESSE DU DÉBUT DE LA ZONE MÉMOIRE ALLOUÉ, 
+;                  -0 SI ERREUR
+; --------------------------------------------
+; regarde si il y a de la place dans la partition du processus
+;     si oui on effectue l'Allocation dynamique
+; si non on redimensionne la partition 
+;     si la partition peut être redimensionnée on effectue directement l'allocation dynamique
+; sinon on déplace la partition vers une zone mémoire plus grande pour qu'elle puisse être redimensionner
+; on effectue alors l'allocation_dynamique
+; --------------------------------------------
+
+
+
+
